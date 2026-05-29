@@ -1,25 +1,33 @@
-on:
-  release:
-    types: [published]
-    
-name: Flatpak
-
-jobs:
-  flatpak:
-    name: "Flatpak"
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.9
-      options: --privileged
-    steps:
-    - uses: actions/checkout@v4
-    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-      with:
-        bundle: qdmr.flatpak
-        manifest-path: de.darc.dm3mat.qdmr.yaml
-        cache-key: flatpak-builder-${{ github.sha }}
-    - name: upload linux artifact
-      uses: softprops/action-gh-release@v1
-      if: ${{startsWith(github.ref, 'refs/tags/') }}
-      with:
-          files: qdmr-x86_64.flatpak.zip 
+name: build-flatpak-multiarch  
+  
+on:  
+  push:  
+    branches: [ "master" ]  
+  pull_request:  
+    branches: [ "master" ]  
+  
+jobs:  
+  build:  
+    runs-on: debian-latest  
+    strategy:  
+      matrix:  
+        arch: [x86_64, aarch64]  
+    steps:  
+    - uses: actions/checkout@v3  
+  
+    - name: Install Flatpak  
+      run: |  
+        sudo apt-get update  
+        sudo apt-get install -y flatpak flatpak-builder  
+  
+    - name: Add Flathub remote  
+      run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo  
+  
+    - name: Install KDE Platform and SDK  
+      run: |  
+        sudo flatpak install -y --arch=${{ matrix.arch }} flathub org.kde.Platform//6.8  
+        sudo flatpak install -y --arch=${{ matrix.arch }} flathub org.kde.Sdk//6.8  
+  
+    - name: Build Flatpak  
+      run: |  
+        sudo flatpak-builder --arch=${{ matrix.arch }} --repo=repo --force-clean build-dir de.darc.dm3mat.qdmr.yaml
