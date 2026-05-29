@@ -8,7 +8,8 @@ on:
   
 jobs:  
   build:  
-    runs-on: debian-latest  
+    runs-on: ubuntu-latest  
+    container: debian:latest
     strategy:  
       matrix:  
         arch: [x86_64, aarch64]  
